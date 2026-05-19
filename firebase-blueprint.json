@@ -1,0 +1,246 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Generated study notes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topic": { "type": "string" },
+        "rawContent": { "type": "string" },
+        "generatedNotes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "topic", "generatedNotes", "createdAt", "updatedAt"]
+    },
+    "FlashcardDeck": {
+      "title": "Flashcard Deck",
+      "description": "Collection of flashcards",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topic": { "type": "string" },
+        "cardCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "topic", "createdAt"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "Individual flashcard",
+      "type": "object",
+      "properties": {
+        "front": { "type": "string" },
+        "back": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["front", "back", "createdAt"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "Generated study quiz with questions and results",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topic": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "string" },
+              "explanation": { "type": "string" },
+              "userAnswer": { "type": "string" }
+            },
+            "required": ["question", "options", "correctAnswer", "explanation"]
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "topic", "score", "totalQuestions", "questions", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback and ratings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "rating": { "type": "number" },
+        "content": { "type": "string" },
+        "status": { "type": "string", "enum": ["received", "reviewing", "fixed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["rating", "content", "status", "createdAt"]
+    },
+    "StudySession": {
+       "title": "Study Session",
+       "description": "Pomodoro or focus session log",
+       "type": "object",
+       "properties": {
+          "userId": { "type": "string" },
+          "startTime": { "type": "string", "format": "date-time" },
+          "endTime": { "type": "string", "format": "date-time" },
+          "duration": { "type": "number" },
+          "type": { "type": "string", "enum": ["pomodoro", "short-break", "long-break"] },
+          "status": { "type": "string", "enum": ["completed", "interrupted"] }
+       },
+       "required": ["userId", "startTime", "type", "status"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "AI Assistant chat message history",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "role", "content", "createdAt"]
+    },
+    "PlannerTask": {
+      "title": "Planner Task",
+      "description": "Study task in the planner",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "status": { "type": "string", "enum": ["drafts", "active", "ready", "done"] },
+        "dueDate": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "priority", "status", "dueDate", "createdAt"]
+    },
+    "Resume": {
+      "title": "Resume",
+      "description": "User resume data",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "personal": { "type": "object" },
+        "experience": { "type": "array" },
+        "education": { "type": "array" },
+        "skills": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "personal", "experience", "education", "skills", "updatedAt"]
+    },
+    "GamificationStats": {
+      "title": "Gamification Stats",
+      "description": "User XP, levels, and streaks",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "streak": { "type": "number" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "lastStudyDate": { "type": "string", "format": "date" },
+        "weeklyXP": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "xp", "level", "streak", "badges", "updatedAt"]
+    },
+    "Roadmap": {
+      "title": "Roadmap",
+      "description": "AI-generated learning roadmap",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "goal": { "type": "string" },
+        "steps": { "type": "array" },
+        "currentStep": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "goal", "steps", "createdAt"]
+    },
+    "ResumeAnalysis": {
+      "title": "Resume Analysis",
+      "description": "AI analysis of user resume",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "score": { "type": "number" },
+        "analysis": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "score", "analysis", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/gamification/{userId}": {
+      "schema": "GamificationStats",
+      "description": "Gamification stats per user"
+    },
+    "/roadmaps/{roadmapId}": {
+      "schema": "Roadmap",
+      "description": "Learning roadmaps"
+    },
+    "/resume_analyses/{analysisId}": {
+      "schema": "ResumeAnalysis",
+      "description": "Resume analysis results"
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Study notes collection"
+    },
+    "/flashcard_decks/{deckId}": {
+      "schema": "FlashcardDeck",
+      "description": "Flashcard decks collection"
+    },
+    "/flashcard_decks/{deckId}/cards/{cardId}": {
+      "schema": "Flashcard",
+      "description": "Individual cards within a deck"
+    },
+    "/quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Quiz attempts collection"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User feedback collection"
+    },
+    "/study_sessions/{sessionId}": {
+       "schema": "StudySession",
+       "description": "Focus session logs"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "AI assistant chat history"
+    },
+    "/planner_tasks/{taskId}": {
+      "schema": "PlannerTask",
+      "description": "Study tasks collection"
+    },
+    "/resumes/{userId}": {
+      "schema": "Resume",
+      "description": "User resume document (one per user)"
+    }
+  }
+}

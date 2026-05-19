@@ -1,0 +1,6 @@
+{
+  "name": "Study Muse",
+  "description": "Premium AI-powered study platform with Gamification, AI Resume Analyzer, Smart PDF Assistant, AI Roadmap Generator, and interactive study tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

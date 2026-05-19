@@ -1,0 +1,245 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // -------------------------------------------------------------------------
+    // 3. Primitive Definition (Global Helpers)
+    // -------------------------------------------------------------------------
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    
+    // Admin check: verify if UID is in the admins collection
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. Global Safety Net
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Entity Validations (Blueprints)
+    // -------------------------------------------------------------------------
+    
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) 
+        && data.keys().size() <= 6
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasAll(['userId', 'topic', 'generatedNotes', 'createdAt', 'updatedAt'])
+        && data.keys().size() <= 6
+        && data.userId == request.auth.uid
+        && data.topic is string && data.topic.size() <= 500
+        && data.generatedNotes is string && data.generatedNotes.size() <= 50000
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidFlashcardDeck(data) {
+      return data.keys().hasAll(['userId', 'topic', 'createdAt'])
+        && data.keys().size() <= 4
+        && data.userId == request.auth.uid
+        && data.topic is string && data.topic.size() <= 500
+        && data.createdAt == request.time;
+    }
+
+    function isValidFlashcard(data) {
+       return data.keys().hasAll(['front', 'back', 'createdAt'])
+        && data.keys().size() == 3
+        && data.front is string && data.front.size() <= 1000
+        && data.back is string && data.back.size() <= 2000
+        && data.createdAt == request.time;
+    }
+
+    function isValidQuiz(data) {
+      return data.keys().hasAll(['userId', 'topic', 'score', 'totalQuestions', 'questions', 'createdAt'])
+        && data.keys().size() <= 8
+        && data.userId == request.auth.uid
+        && data.topic is string && data.topic.size() <= 500
+        && data.score is number
+        && data.totalQuestions is number
+        && data.questions is list
+        && data.createdAt == request.time;
+    }
+
+    function isValidFeedback(data) {
+       return data.keys().hasAll(['userId', 'rating', 'content', 'status', 'createdAt'])
+        && data.keys().size() <= 6
+        && data.userId == request.auth.uid
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.content is string && data.content.size() <= 2000
+        && data.status in ['received', 'reviewing', 'fixed']
+        && data.createdAt == request.time;
+    }
+
+    function isValidStudySession(data) {
+       return data.keys().hasAll(['userId', 'startTime', 'type', 'status'])
+        && data.keys().size() <= 6
+        && data.userId == request.auth.uid
+        && data.startTime == request.time
+        && data.type in ['pomodoro', 'short-break', 'long-break']
+        && data.status in ['completed', 'interrupted'];
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['userId', 'role', 'content', 'createdAt'])
+        && data.keys().size() == 4
+        && data.userId == request.auth.uid
+        && data.role in ['user', 'assistant']
+        && data.content is string && data.content.size() <= 10000
+        && data.createdAt == request.time;
+    }
+
+    function isValidPlannerTask(data) {
+      return data.keys().hasAll(['userId', 'title', 'description', 'priority', 'status', 'dueDate', 'createdAt'])
+        && data.keys().size() == 7
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.priority in ['low', 'medium', 'high']
+        && data.status in ['drafts', 'active', 'ready', 'done']
+        && data.dueDate is string && data.dueDate.size() <= 20
+        && data.createdAt == request.time;
+    }
+
+    function isValidResume(data) {
+      return data.keys().hasAll(['userId', 'personal', 'experience', 'education', 'skills', 'updatedAt'])
+        && data.keys().size() == 6
+        && data.userId == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
+    function isValidGamification(data) {
+      return data.keys().hasAll(['userId', 'xp', 'level', 'streak', 'badges', 'updatedAt'])
+        && data.userId == request.auth.uid
+        && (data.xp is number || data.xp is int)
+        && (data.level is number || data.level is int)
+        && (data.streak is number || data.streak is int);
+    }
+
+    function isValidRoadmap(data) {
+      return data.keys().hasAll(['userId', 'goal', 'steps', 'createdAt'])
+        && data.userId == request.auth.uid
+        && data.goal is string
+        && data.steps is list;
+    }
+
+    function isValidResumeAnalysis(data) {
+      return data.keys().hasAll(['userId', 'score', 'analysis', 'createdAt'])
+        && data.userId == request.auth.uid
+        && (data.score is number || data.score is int);
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Collection Matches
+    // -------------------------------------------------------------------------
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isVerified() && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']);
+    }
+
+    match /notes/{noteId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidNote(incoming());
+      allow update: if isOwner(existing().userId) && isValidNote(incoming()) 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['topic', 'generatedNotes', 'updatedAt']);
+      allow delete: if isOwner(existing().userId);
+    }
+
+    match /flashcard_decks/{deckId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidFlashcardDeck(incoming());
+      allow update: if isOwner(existing().userId) && isValidFlashcardDeck(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['topic']);
+      allow delete: if isOwner(existing().userId);
+
+      match /cards/{cardId} {
+         // Master Gate logic: card access requires deck ownership
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/flashcard_decks/$(deckId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidFlashcard(incoming());
+      }
+    }
+
+    match /quizzes/{quizId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidQuiz(incoming());
+      // Quizzes are generally immutable after submission
+      allow delete: if isOwner(existing().userId);
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin() || (isSignedIn() && isOwner(existing().userId));
+      allow create: if isVerified() && isValidFeedback(incoming()) && isValidId(feedbackId)
+        && incoming().status == 'received'; // Start status
+      allow update: if isAdmin() && (incoming().diff(existing()).affectedKeys().hasOnly(['status']));
+    }
+
+    match /study_sessions/{sessionId} {
+      allow read: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && isValidStudySession(incoming()) && isValidId(sessionId);
+    }
+
+    match /chat_messages/{messageId} {
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && isValidChatMessage(incoming()) && isValidId(messageId);
+      allow delete: if isOwner(existing().userId);
+    }
+
+    match /planner_tasks/{taskId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPlannerTask(incoming());
+      allow update: if isOwner(existing().userId) && isValidPlannerTask(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'priority', 'dueDate', 'title', 'description']);
+      allow delete: if isOwner(existing().userId);
+    }
+
+    match /resumes/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isVerified() && isValidResume(incoming()) && isOwner(userId);
+      allow update: if isOwner(userId) && isValidResume(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['personal', 'experience', 'education', 'skills', 'updatedAt']);
+    }
+
+    match /gamification/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isVerified() && isValidGamification(incoming()) && isOwner(userId);
+      allow update: if isOwner(userId) && isValidGamification(incoming());
+    }
+
+    match /roadmaps/{roadmapId} {
+      allow read: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && isValidRoadmap(incoming());
+      allow update: if isSignedIn() && isOwner(existing().userId);
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    match /resume_analyses/{analysisId} {
+      allow read: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && isValidResumeAnalysis(incoming());
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+  }
+}
